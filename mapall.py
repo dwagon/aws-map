@@ -48,6 +48,10 @@ class Dot(object):
         return True
 
     ##########################################################################
+    def inVpc(self, subnet):
+        return True
+
+    ##########################################################################
     def connect(self, fh, a, b, **kwargs):
         blockstr = ''
         for kk, kv in kwargs.items():
@@ -846,28 +850,54 @@ def parseArgs():
 
 
 ###############################################################################
-def generate_file(fh):
+def generate_ranks(args, fh):
+    # Assign ranks to objects to make it look prettier
+    ranks = [
+        'Database',
+        'LoadBalancer',
+        'Subnet',
+        'Instance',
+        'VPC',
+        'InternetGateway',
+        'RouteTable',
+        ]
+
+    # Remove ranks that aren't present
+    for r in ranks[:]:
+        for o in objects.values():
+            if o.__class__.__name__ == r:
+                if o.inSubnet(args.subnet) and o.inVpc(args.vpc):
+                    break
+        else:
+            ranks.remove(r)
+
+    # Rank all the objects
+    for objtype in ranks:
+        fh.write('// Rank %s\n' % objtype)
+        fh.write('rank_%s [style=invisible]\n' % objtype)
+        fh.write('{ rank=same; rank_%s; ' % objtype)
+        for obj in sorted(objects.values()):
+            if obj.__class__.__name__ == objtype:
+                obj.rank(fh)
+        fh.write('}\n')
+
+    # Relate the ranks to each other
+    strout = " -> ".join(["rank_%s" % o for o in ranks])
+    fh.write("%s [style=invis];\n" % strout)
+
+
+###############################################################################
+def generate_file(args, fh):
     fh.write("digraph G {\n")
     fh.write('overlap=false\n')
     fh.write('ranksep=1.6\n')
+    fh.write('rankdir=TD\n')
 
     # Draw all the objects
     for obj in sorted(objects.values()):
         obj.draw(fh)
 
-    # Assign Ranks
-    for objtype in [Database, LoadBalancer, Subnet, Instance, VPC, InternetGateway, RouteTable]:
-        fh.write('// Rank %s\n' % objtype.__name__)
-        fh.write('rank_%s [style=invisible]\n' % objtype.__name__)
-        fh.write('{ rank=same; rank_%s; ' % objtype.__name__)
-        for obj in sorted(objects.values()):
-            if obj.__class__ == objtype:
-                obj.rank(fh)
-        fh.write('}\n')
-    ranks = ['RouteTable', 'Subnet', 'Database', 'LoadBalancer', 'Instance', 'VPC', 'InternetGateway']
-    strout = " -> ".join(["rank_%s" % x for x in ranks])
-    fh.write("%s [style=invis];\n" % strout)
-
+    generate_ranks(args, fh)
     fh.write("}\n")
 
 
@@ -880,10 +910,10 @@ def main():
             if o.startswith(args.iterate):
                 f = open('%s.dot' % o, 'w')
                 setattr(args, args.iterate, o)
-                generate_file(f)
+                generate_file(args, f)
                 f.close()
     else:
-        generate_file(args.output)
+        generate_file(args, args.output)
 
 ###############################################################################
 if __name__ == '__main__':
