@@ -454,6 +454,8 @@ class NetworkInterface(Dot):
         self.name = self['NetworkInterfaceId']
 
     def partOfInstance(self, instid):
+        if not self['Attachment']:
+            return False
         return self['Attachment'].get('InstanceId', None) == instid
 
     def inSubnet(self, subnet=None):
