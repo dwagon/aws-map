@@ -34,6 +34,15 @@ $ ./mapall.py --iterate vpc
 $ ./mapall.py --iterave subnet
 ```
 
+Security Map
+------------
+You can draw the network acls and security groups that are relevant for
+a single ec2 instance.
+
+```
+$ ./mapall --secmap i-XXXXXXX
+```
+
 Security Groups
 ---------------
 Normally security groups get in the way and obscure what you want
